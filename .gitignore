@@ -26,4 +26,5 @@ funcall.la
 funcall.lo
 libtool
 modules/
-
+Makefile-funcall.mk
+nbproject
