@@ -227,6 +227,12 @@ PHP_RINIT_FUNCTION(funcall) {
     FCG(use_callback) = CALLBACK_DISABLE;
     FCG(fc_pre_list) = NULL;
     FCG(fc_post_list) = NULL;
+
+    ALLOC_HASHTABLE(FCG(fc_pre_ht));
+    ALLOC_HASHTABLE(FCG(fc_post_ht));
+    zend_hash_init(FCG(fc_pre_ht), 0, NULL, fc_free_callback_list, 0);
+    zend_hash_init(FCG(fc_post_ht), 0, NULL, fc_free_callback_list, 0);
+
     FCG(last_eval_statement) = NULL;
     FUNCALL_DEBUG("RINIT end\n");
     return SUCCESS;
@@ -243,49 +249,42 @@ PHP_RSHUTDOWN_FUNCTION(funcall) {
 
     FREE_ZVAL(FCG(fc_null_zval));
 
+    FREE_HASHTABLE(FCG(fc_pre_ht));
+    FREE_HASHTABLE(FCG(fc_post_ht));
+
     //php_var_dump(FCG(fc_null_zval),1 TSRMLS_CC);
-    fc_function_list *f_list, *tmp_list;
-    fc_callback_list *cb, *tmp_cb;
 
-    f_list = FCG(fc_pre_list);
-    while (f_list) {
-        tmp_list = f_list->next;
-        cb = f_list->callback_ref;
-        while (cb) {
-            tmp_cb = cb->next;
-            FREE_ZVAL(cb->func);
-            efree(cb->name);
-            efree(cb);
-            cb = tmp_cb;
-        }
-        FREE_ZVAL(f_list->func);
-        efree(f_list->name);
-        efree(f_list);
-        f_list = tmp_list;
-    }
-
-
-    f_list = FCG(fc_post_list);
-    while (f_list) {
-        tmp_list = f_list->next;
-        cb = f_list->callback_ref;
-        while (cb) {
-            tmp_cb = cb->next;
-            FREE_ZVAL(cb->func);
-            efree(cb->name);
-            efree(cb);
-            cb = tmp_cb;
-        }
-        FREE_ZVAL(f_list->func);
-        efree(f_list->name);
-        efree(f_list);
-        f_list = tmp_list;
-    }
+    fc_free_callback_list(FCG(fc_pre_list));
+    fc_free_callback_list(FCG(fc_post_list));
+    
     FCG(use_callback) = CALLBACK_DISABLE;
     FUNCALL_DEBUG("RSHUTDOWN end\n");
     return SUCCESS;
 }
 /* }}} */
+
+void fc_free_callback_list(void *pElement)
+{
+    fc_function_list *f_list, *tmp_list;
+    fc_callback_list *cb, *tmp_cb;
+    f_list = pElement;
+
+    while (f_list) {
+        tmp_list = f_list->next;
+        cb = f_list->callback_ref;
+        while (cb) {
+            tmp_cb = cb->next;
+            FREE_ZVAL(cb->func);
+            efree(cb->name);
+            efree(cb);
+            cb = tmp_cb;
+        }
+        FREE_ZVAL(f_list->func);
+        efree(f_list->name);
+        efree(f_list);
+        f_list = tmp_list;
+    }
+}
 
 /* {{{ PHP_MINFO_FUNCTION
  */
@@ -709,6 +708,7 @@ int fc_add_callback(
     } else {
         tmp_gfl = FCG(fc_post_list);
     }
+
     if (!tmp_gfl) {
         FUNCALL_DEBUG("no tmp_gfl\n");
         if (type == 0) {

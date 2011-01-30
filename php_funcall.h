@@ -60,6 +60,8 @@ PHP_FUNCTION(fc_list);
 ZEND_BEGIN_MODULE_GLOBALS(funcall)
 fc_function_list *fc_pre_list;
 fc_function_list *fc_post_list;
+HashTable *fc_pre_ht;
+HashTable *fc_post_ht;
 char *last_eval_statement;
 int use_callback;
 zval *fc_null_zval;
