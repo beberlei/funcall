@@ -1,0 +1,13 @@
+Enhancements
+ * add callbacks in php.ini
+ * function replacement
+
+ideas from lach AT php5.pl:
+* passing function parameters by reference to 
+  pre-call function, so that they can be changed
+* allowing to stop executing of the hook chain
+  by, for example, returning bool(false) from one
+  of pre-call function
+* additional parameter passed to pre-call function
+  (by reference) allowing to set return value for
+  function

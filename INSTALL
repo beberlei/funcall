@@ -1,0 +1,16 @@
+Compilation
+--------------------------
+$ pecl install funcall
+
+or
+
+$ cd funcall-source
+$ phpize
+$ ./configure
+$ make
+$ make install
+
+
+Configure in  php.ini
+---------------------------
+extension=funcall.so

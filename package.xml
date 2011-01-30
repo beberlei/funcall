@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.6.1" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
+http://pear.php.net/dtd/tasks-1.0.xsd
+http://pear.php.net/dtd/package-2.0
+http://pear.php.net/dtd/package-2.0.xsd">
+ <name>funcall</name>
+ <channel>pecl.php.net</channel>
+ <summary>Add callbacks for any function/method</summary>
+ <description>Call callbacks before or after specified functions/methods being called.
+ </description>
+ <lead>
+  <name>Chen Ze</name>
+  <user>surfchen</user>
+  <email>surfchen@gmail.com</email>
+  <active>yes</active>
+ </lead>
+ <date>2010-11-08</date>
+ <version>
+  <release>0.3.0alpha</release>
+  <api>0.2</api>
+ </version>
+ <stability>
+  <release>alpha</release>
+  <api>stable</api>
+ </stability>
+ <license>New BSD</license>
+ <notes>
+ Added PHP 5.3 support
+ fixed bug #14849
+ fixed bug #16553
+ fixed bug #16999
+ </notes>
+ <contents>
+  <dir name="/">
+   <dir name="tests">
+    <file name="function.phpt" role="test" />
+    <file name="method.phpt" role="test" />
+    <file name="include.phpt" role="test" />
+   </dir> <!-- //tests -->
+   <file name="config.m4" role="src" />
+   <file name="config.w32" role="src" />
+   <file name="funcall.c" role="src" />
+   <file name="php_funcall.h" role="src" />
+   <file name="funcall.php" role="doc" />
+   <file name="LICENSE" role="doc" />
+   <file name="INSTALL" role="doc" />
+   <file name="TODO" role="doc" />
+  </dir> <!-- / -->
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>5.3</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.0b1</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>funcall</providesextension>
+ <extsrcrelease />
+ <changelog>
+  <release>
+   <version>
+    <release>0.3.0alpha</release>
+    <api>0.2</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>stable</api>
+   </stability>
+   <date>2010-11-08</date>
+   <license>New BSD</license>
+   <notes>
+ Added PHP 5.3 support
+ fixed bug #14849
+ fixed bug #16553
+ fixed bug #16999
+   </notes>
+  </release>
+ </changelog>
+</package>

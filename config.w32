@@ -1,0 +1,13 @@
+// $Id$
+// vim:ft=javascript
+
+// If your extension references something external, use ARG_WITH
+// ARG_WITH("funcall", "for funcall support", "no");
+
+// Otherwise, use ARG_ENABLE
+// ARG_ENABLE("funcall", "enable funcall support", "no");
+
+if (PHP_FUNCALL != "no") {
+	EXTENSION("funcall", "funcall.c");
+}
+
