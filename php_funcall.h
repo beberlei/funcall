@@ -29,13 +29,6 @@ extern zend_module_entry funcall_module_entry;
 #include "TSRM.h"
 #endif
 
-typedef struct _fc_function_list {
-    char *name;
-    zval *func;
-    struct _fc_callback_list *callback_ref;
-    struct _fc_function_list *next;
-} fc_function_list;
-
 typedef struct _fc_callback_list {
     char *name;
     zval *func;
@@ -58,8 +51,6 @@ PHP_FUNCTION(fc_list);
 
  */
 ZEND_BEGIN_MODULE_GLOBALS(funcall)
-fc_function_list *fc_pre_list;
-fc_function_list *fc_post_list;
 HashTable *fc_pre_ht;
 HashTable *fc_post_ht;
 char *last_eval_statement;

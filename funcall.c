@@ -41,14 +41,6 @@ ZEND_DLEXPORT void (*fc_zend_execute_internal)(zend_execute_data *execute_data_p
 ZEND_DLEXPORT void fc_execute(zend_op_array *op_array TSRMLS_DC);
 ZEND_DLEXPORT void (*fc_zend_execute)(zend_op_array *op_array TSRMLS_DC);
 
-
-#define NEW_FN_LIST(li,fname,len) li=emalloc(sizeof(fc_function_list));                   \
-    li->name=emalloc(len+1);\
-    strcpy(li->name,fname);\
-    MAKE_STD_ZVAL(li->func);\
-    ZVAL_STRING(li->func,li->name,0)\
-    li->next=NULL
-
 #define NEW_CB_LIST(li,fname,len) li=emalloc(sizeof(fc_callback_list));                   \
     li->name=emalloc(len+1);\
     strcpy(li->name,fname);\
@@ -176,24 +168,15 @@ ZEND_API int fc_include_or_eval_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 void fc_free_callback_list(void *pElement)
 {
-    fc_function_list *f_list, *tmp_list;
     fc_callback_list *cb, *tmp_cb;
-    f_list = pElement;
+    cb = pElement;
 
-    while (f_list) {
-        tmp_list = f_list->next;
-        cb = f_list->callback_ref;
-        while (cb) {
-            tmp_cb = cb->next;
-            FREE_ZVAL(cb->func);
-            efree(cb->name);
-            efree(cb);
-            cb = tmp_cb;
-        }
-        FREE_ZVAL(f_list->func);
-        efree(f_list->name);
-        efree(f_list);
-        f_list = tmp_list;
+    while (cb) {
+        tmp_cb = cb->next;
+        FREE_ZVAL(cb->func);
+        efree(cb->name);
+        efree(cb);
+        cb = tmp_cb;
     }
 }
 
@@ -248,8 +231,6 @@ PHP_RINIT_FUNCTION(funcall) {
     ZVAL_NULL(FCG(fc_null_zval));
 
     FCG(use_callback) = CALLBACK_DISABLE;
-    FCG(fc_pre_list) = NULL;
-    FCG(fc_post_list) = NULL;
 
     ALLOC_HASHTABLE(FCG(fc_pre_ht));
     ALLOC_HASHTABLE(FCG(fc_post_ht));
@@ -276,9 +257,6 @@ PHP_RSHUTDOWN_FUNCTION(funcall) {
     FREE_HASHTABLE(FCG(fc_post_ht));
 
     //php_var_dump(FCG(fc_null_zval),1 TSRMLS_CC);
-
-    fc_free_callback_list(FCG(fc_pre_list));
-    fc_free_callback_list(FCG(fc_post_list));
     
     FCG(use_callback) = CALLBACK_DISABLE;
     FUNCALL_DEBUG("RSHUTDOWN end\n");
@@ -344,7 +322,7 @@ PHP_FUNCTION(fc_add_post) {
     );
  */
 PHP_FUNCTION(fc_list) {
-    fc_function_list *pre_list, *post_list;
+    /*fc_function_list *pre_list, *post_list;
     pre_list = FCG(fc_pre_list);
     post_list = FCG(fc_post_list);
 
@@ -380,11 +358,11 @@ PHP_FUNCTION(fc_list) {
         }
         add_assoc_zval(post_arr, post_list->name, callback_list);
         post_list = post_list->next;
-    }
+    }*/
 
     array_init(return_value);
-    add_next_index_zval(return_value, pre_arr);
-    add_next_index_zval(return_value, post_arr);
+    /*add_next_index_zval(return_value, pre_arr);
+    add_next_index_zval(return_value, post_arr);*/
 }
 
 /* }}} */
@@ -675,21 +653,15 @@ if (!strcmp(current_name,"eval")) {
 }
 
 static int callback_existed(char *func_name TSRMLS_DC) {
-    fc_function_list *pre_list, *post_list;
-    pre_list = FCG(fc_pre_list);
-    post_list = FCG(fc_post_list);
+    HashTable *list = NULL;
 
-    while (pre_list) {
-        if (!strcmp(pre_list->name, func_name)) {
-            return 1;
-        }
-        pre_list = pre_list->next;
+    list = FCG(fc_pre_ht);
+    if (zend_hash_exists(list, func_name, strlen(func_name))) {
+        return 1;
     }
-    while (post_list) {
-        if (!strcmp(post_list->name, func_name)) {
-            return 1;
-        }
-        post_list = post_list->next;
+    list = FCG(fc_post_ht);
+    if (zend_hash_exists(list, func_name, strlen(func_name))) {
+        return 1;
     }
     return 0;
 }
@@ -701,67 +673,15 @@ int fc_add_callback(
         int callback_len,
         int type TSRMLS_DC) {
     FUNCALL_DEBUG("fc_add_callback() begin\n");
-    fc_function_list *tmp_gfl, *gfl, *new_gfl;
     fc_callback_list *cl = NULL, *new_cl;
     HashTable *tmp_ht;
 
     // old code
     if (type == 0) {
-        tmp_gfl = FCG(fc_pre_list);
         tmp_ht = FCG(fc_pre_ht);
     } else {
-        tmp_gfl = FCG(fc_post_list);
         tmp_ht = FCG(fc_post_ht);
     }
-
-    if (!tmp_gfl) {
-        FUNCALL_DEBUG("no tmp_gfl\n");
-        if (type == 0) {
-            NEW_FN_LIST(FCG(fc_pre_list), function_name, function_len);
-            gfl = FCG(fc_pre_list);
-        } else {
-            NEW_FN_LIST(FCG(fc_post_list), function_name, function_len);
-            gfl = FCG(fc_post_list);
-        }
-    } else {
-        FUNCALL_DEBUG("yes tmp_gfl\n");
-        if (type == 0) {
-            gfl = FCG(fc_pre_list);
-        } else {
-            gfl = FCG(fc_post_list);
-        }
-        while (1) {
-            if (!strcmp(gfl->name, function_name)) {
-                cl = gfl->callback_ref;
-                break;
-            }
-            if (!gfl->next) {
-                NEW_FN_LIST(new_gfl, function_name, function_len);
-                gfl->next = new_gfl;
-                gfl = new_gfl;
-                break;
-            }
-            gfl = gfl->next;
-        }
-    }
-
-    if (!cl) {
-        NEW_CB_LIST(cl, callback_name, callback_len);
-        gfl->callback_ref = cl;
-    } else {
-        while (1) {
-            if (!strcmp(cl->name, callback_name)) {
-                return 0;
-            }
-            if (!cl->next) {
-                NEW_CB_LIST(new_cl, callback_name, callback_len);
-                cl->next = new_cl;
-                break;
-            }
-            cl = cl->next;
-        }
-    }
-    
 
     // new code
     cl = NULL;
@@ -782,51 +702,17 @@ int fc_add_callback(
 
 static void fc_do_callback(char *current_function, zval *** args, int type TSRMLS_DC) {
     FUNCALL_DEBUG("fc_do_callback begin\n");
-    fc_function_list *fc_list;
     fc_callback_list *cl;
     int arg_count;
     if (type == 0) {
         arg_count = 1;
-        fc_list = FCG(fc_pre_list);
     } else {
         arg_count = 3;
-        fc_list = FCG(fc_post_list);
     }
     zval *retval = NULL;
 
     zval **test_args[1];
     test_args[0] = &(cl->func);
-
-    while (fc_list) {
-        if (!strcmp(fc_list->name, current_function)) {
-            cl = fc_list->callback_ref;
-            while (cl) {
-                FUNCALL_DEBUG("calling func begin\n");
-                //fprintf(stderr,"-------------%s:%d\n",current_function,arg_count);
-                FCG(use_callback) = CALLBACK_DISABLE;
-                //convert_to_string(cl->func);
-                //call_user_function_ex(EG(function_table), NULL, cl->func, &retval, 1, test_args, 0,NULL TSRMLS_CC);
-                //if (type==1) {
-                call_user_function_ex(EG(function_table), NULL, cl->func, &retval, arg_count, args, 0, NULL TSRMLS_CC);
-                //}
-                FUNCALL_DEBUG("calling func end\n");
-                if (retval) {
-                    FREE_ZVAL(retval);
-                }
-                /*if(call_user_function_ex(EG(function_table), NULL, cl->func, &retval, arg_count, args, 0,NULL TSRMLS_CC) != SUCCESS)
-                {
-                    //
-                }
-                 */
-                /*
-                 */
-                FCG(use_callback) = CALLBACK_ENABLE;
-                cl = cl->next;
-            }
-            break;
-        }
-        fc_list = fc_list->next;
-    }
 
     // new code
     HashTable *callbacks;
