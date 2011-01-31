@@ -174,6 +174,29 @@ ZEND_API int fc_include_or_eval_handler(ZEND_OPCODE_HANDLER_ARGS) {
     return ZEND_USER_OPCODE_DISPATCH;
 }
 
+void fc_free_callback_list(void *pElement)
+{
+    fc_function_list *f_list, *tmp_list;
+    fc_callback_list *cb, *tmp_cb;
+    f_list = pElement;
+
+    while (f_list) {
+        tmp_list = f_list->next;
+        cb = f_list->callback_ref;
+        while (cb) {
+            tmp_cb = cb->next;
+            FREE_ZVAL(cb->func);
+            efree(cb->name);
+            efree(cb);
+            cb = tmp_cb;
+        }
+        FREE_ZVAL(f_list->func);
+        efree(f_list->name);
+        efree(f_list);
+        f_list = tmp_list;
+    }
+}
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(funcall) {
@@ -262,29 +285,6 @@ PHP_RSHUTDOWN_FUNCTION(funcall) {
     return SUCCESS;
 }
 /* }}} */
-
-void fc_free_callback_list(void *pElement)
-{
-    fc_function_list *f_list, *tmp_list;
-    fc_callback_list *cb, *tmp_cb;
-    f_list = pElement;
-
-    while (f_list) {
-        tmp_list = f_list->next;
-        cb = f_list->callback_ref;
-        while (cb) {
-            tmp_cb = cb->next;
-            FREE_ZVAL(cb->func);
-            efree(cb->name);
-            efree(cb);
-            cb = tmp_cb;
-        }
-        FREE_ZVAL(f_list->func);
-        efree(f_list->name);
-        efree(f_list);
-        f_list = tmp_list;
-    }
-}
 
 /* {{{ PHP_MINFO_FUNCTION
  */
@@ -703,10 +703,15 @@ int fc_add_callback(
     FUNCALL_DEBUG("fc_add_callback() begin\n");
     fc_function_list *tmp_gfl, *gfl, *new_gfl;
     fc_callback_list *cl = NULL, *new_cl;
+    HashTable *tmp_ht;
+
+    // old code
     if (type == 0) {
         tmp_gfl = FCG(fc_pre_list);
+        tmp_ht = FCG(fc_pre_ht);
     } else {
         tmp_gfl = FCG(fc_post_list);
+        tmp_ht = FCG(fc_post_ht);
     }
 
     if (!tmp_gfl) {
@@ -756,7 +761,22 @@ int fc_add_callback(
             cl = cl->next;
         }
     }
+    
+
+    // new code
+    cl = NULL;
+    new_cl = NULL;
+    if (zend_hash_find(tmp_ht, function_name, function_len, (void **)&cl) == FAILURE)  {
+        NEW_CB_LIST(cl, callback_name, callback_len);
+        if (zend_hash_add(tmp_ht, function_name, function_len, cl, sizeof(fc_callback_list), NULL) == FAILURE) {
+            return; // SHOULD NEVER HAPPEN
+        }
+    } else {
+        cl->next = NEW_CB_LIST(new_cl, callback_name, callback_len);
+    }
+
     FCG(use_callback) = CALLBACK_ENABLE;
+
     return 1;
 }
 
@@ -806,6 +826,26 @@ static void fc_do_callback(char *current_function, zval *** args, int type TSRML
             break;
         }
         fc_list = fc_list->next;
+    }
+
+    // new code
+    HashTable *callbacks;
+    if (type == 0) {
+        callbacks = FCG(fc_pre_ht);
+    } else {
+        callbacks = FCG(fc_post_ht);
+    }
+
+    if (zend_hash_find(callbacks, current_function, strlen(current_function), (void **)&cl) == SUCCESS)  {
+        while (cl) {
+            FCG(use_callback) = CALLBACK_DISABLE;
+            call_user_function_ex(EG(function_table), NULL, cl->func, &retval, arg_count, args, 0, NULL TSRMLS_CC);
+            if (retval) {
+                FREE_ZVAL(retval);
+            }
+            FCG(use_callback) = CALLBACK_ENABLE;
+            cl = cl->next;
+        }
     }
 
     FUNCALL_DEBUG("fc_do_callback end\n");
