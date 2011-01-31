@@ -12,6 +12,7 @@ Register pre and post processing callbacks for any function or method.
 
 ## TODO
 
+* Refactor to pass method/function name to callbacks as first argument
 * Refactor callbacks to allow any PHP callback not just strings
 * Allow to modify arguments in pre callbacks.
 * Reimplement fc_list() as fc_list_all()
