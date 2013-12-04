@@ -210,6 +210,8 @@ PHP_MINIT_FUNCTION(funcall) {
 /* {{{ PHP_MSHUTDOWN_FUNCTION
  */
 PHP_MSHUTDOWN_FUNCTION(funcall) {
+    zend_execute=fc_zend_execute;
+    zend_execute_internal=fc_zend_execute_internal;
     /* uncomment this line if you have INI entries
     UNREGISTER_INI_ENTRIES();
      */
@@ -807,7 +809,7 @@ if (exec_data->opline) {
         fc_do_callback(current_function, args, 1 TSRMLS_CC);
         zend_hash_destroy((*args[0])->value.ht);
         FREE_HASHTABLE(Z_ARRVAL_P(*args[0]));
-        efree(*args[0]);
+        FREE_ZVAL(*args[0]);
         efree(args[0]);
         efree(args);
         FREE_ZVAL(t);
@@ -878,7 +880,7 @@ if (exec_data->opline) {
 
         zend_hash_destroy((*args[0])->value.ht);
         FREE_HASHTABLE((*args[0])->value.ht);
-        efree(*args[0]);
+        FREE_ZVAL(*args[0]);
         efree(args[0]);
         efree(args);
         FREE_ZVAL(t);
