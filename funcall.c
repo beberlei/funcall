@@ -210,6 +210,8 @@ PHP_MINIT_FUNCTION(funcall) {
 /* {{{ PHP_MSHUTDOWN_FUNCTION
  */
 PHP_MSHUTDOWN_FUNCTION(funcall) {
+    zend_execute=fc_zend_execute;
+    zend_execute_internal=fc_zend_execute_internal;
     /* uncomment this line if you have INI entries
     UNREGISTER_INI_ENTRIES();
      */
